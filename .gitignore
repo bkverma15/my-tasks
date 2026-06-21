@@ -1,0 +1,12 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node (if added later)
+node_modules/
+*.log
+npm-debug.log*
+
+# Keep it simple — only track source files

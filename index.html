@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📝 Remember — Tasks & Notes</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Header + Search -->
+    <header class="header">
+      <h1 class="title">📝 Remember</h1>
+      <div class="search-wrap">
+        <input
+          type="search"
+          id="searchInput"
+          class="search-input"
+          placeholder="Search..."
+          autocomplete="off"
+        />
+      </div>
+    </header>
+
+    <!-- Add new item -->
+    <form id="addForm" class="add-form">
+      <input
+        type="text"
+        id="textInput"
+        class="text-input"
+        placeholder="Add a task or note..."
+        autocomplete="off"
+        required
+      />
+      <input
+        type="text"
+        id="tagSelect"
+        class="select"
+        list="tagList"
+        placeholder="#tag"
+        title="Tag (type your own or pick one)"
+        autocomplete="off"
+      />
+      <datalist id="tagList">
+        <option value="work"></option>
+        <option value="home"></option>
+        <option value="personal"></option>
+        <option value="ideas"></option>
+      </datalist>
+      <select id="typeSelect" class="select" title="Type">
+        <option value="task">Task</option>
+        <option value="note">Note</option>
+      </select>
+      <button type="submit" class="btn-add">Add</button>
+    </form>
+
+    <!-- Tag filters -->
+    <div id="tagFilters" class="tag-filters"></div>
+
+    <!-- Item list -->
+    <ul id="itemList" class="item-list"></ul>
+
+    <!-- Empty state -->
+    <p id="emptyState" class="empty-state">Nothing here yet. Add your first task or note above! 👆</p>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span id="counter"></span>
+      <button id="clearDone" class="link-btn">Clear done</button>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
