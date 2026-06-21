@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>📝 Remember — Tasks & Notes (Cloud Sync)</title>
   <link rel="stylesheet" href="styles.css" />
+  <!-- Firebase SDK via import map (so bare imports like "firebase/app" resolve) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+      }
+    }
+  </script>
 </head>
 <body>
   <!-- ===== Welcome / Room screen ===== -->
