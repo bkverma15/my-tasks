@@ -1,3 +1,84 @@
+/* ===== Welcome / Room screen ===== */
+.welcome {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.welcome-card {
+  max-width: 400px;
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 36px 28px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(31, 35, 48, 0.08);
+}
+
+.welcome-logo {
+  font-size: 52px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.welcome-card h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.welcome-sub {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.welcome-help {
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: left;
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+.welcome-help b {
+  color: var(--primary);
+}
+
+.room-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.room-input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  text-transform: lowercase;
+}
+
+.room-input:focus {
+  border-color: var(--primary);
+}
+
+.welcome-tip {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 /* ===== Base ===== */
 * {
   box-sizing: border-box;
@@ -44,9 +125,83 @@ body {
   margin-bottom: 16px;
 }
 
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .title {
   font-size: 24px;
   font-weight: 700;
+}
+
+/* sync indicator */
+.sync-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 5px 11px 5px 9px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.sync-btn:hover {
+  border-color: var(--primary);
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sync-dot.saving {
+  background: #f5a623;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.sync-dot.connecting {
+  background: #f5a623;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.sync-dot.saved {
+  background: #2ecc71;
+}
+
+.sync-dot.error {
+  background: var(--danger);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (min-width: 520px) {
+  .sync-text {
+    display: inline;
+  }
+}
+
+@media (max-width: 519px) {
+  .sync-text {
+    display: none;
+  }
 }
 
 .search-input {

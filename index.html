@@ -3,14 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>📝 Remember — Tasks & Notes</title>
+  <title>📝 Remember — Tasks & Notes (Cloud Sync)</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app">
-    <!-- Header + Search -->
+  <!-- ===== Welcome / Room screen ===== -->
+  <div id="welcomeScreen" class="welcome">
+    <div class="welcome-card">
+      <div class="welcome-logo">📝</div>
+      <h1>Remember</h1>
+      <p class="welcome-sub">Tasks &amp; Notes with cloud sync</p>
+
+      <p class="welcome-help">
+        Enter a <b>room code</b> (any word you like). Use the
+        <b>same code on all your devices</b> to keep them in sync.
+      </p>
+
+      <form id="roomForm" class="room-form">
+        <input
+          type="text"
+          id="roomInput"
+          class="room-input"
+          placeholder="e.g. sachin-2024"
+          autocomplete="off"
+          required
+        />
+        <button type="submit" class="btn-add">Join</button>
+      </form>
+      <p class="welcome-tip">
+        💡 Tip: pick something hard to guess (it keeps your data private).
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== Main app ===== -->
+  <div id="app" class="app" style="display:none">
+    <!-- Header + Search + Sync -->
     <header class="header">
-      <h1 class="title">📝 Remember</h1>
+      <div class="header-row">
+        <h1 class="title">📝 Remember</h1>
+        <button id="syncBtn" class="sync-btn" title="Sync status">
+          <span id="syncDot" class="sync-dot saving"></span>
+          <span id="syncText" class="sync-text">connecting…</span>
+        </button>
+      </div>
       <div class="search-wrap">
         <input
           type="search"
@@ -61,7 +97,9 @@
     <ul id="itemList" class="item-list"></ul>
 
     <!-- Empty state -->
-    <p id="emptyState" class="empty-state">Nothing here yet. Add your first task or note above! 👆</p>
+    <p id="emptyState" class="empty-state">
+      Nothing here yet. Add your first task or note above! 👆
+    </p>
 
     <!-- Footer -->
     <footer class="footer">
@@ -70,6 +108,6 @@
     </footer>
   </div>
 
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
