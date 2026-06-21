@@ -126,6 +126,7 @@ function joinRoom(roomCode) {
     (err) => {
       console.error("Sync error:", err);
       setSyncStatus("error");
+      alert("SYNC ERROR:\n" + (err && err.message ? err.message : err));
     }
   );
 }
