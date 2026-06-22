@@ -4,7 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>📝 Remember — Tasks & Notes (Cloud Sync)</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans for headings, Inter for UI/Body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="styles.css" />
+  
   <!-- Firebase SDK via import map (so bare imports like "firebase/app" resolve) -->
   <script type="importmap">
     {
@@ -15,7 +22,21 @@
     }
   </script>
 </head>
-<body>
+<body class="dark-theme"> <!-- Defaults to Dark Theme for premium look -->
+
+  <!-- Background Animated Gradients -->
+  <div class="mesh-background">
+    <div class="mesh-blob blob-1"></div>
+    <div class="mesh-blob blob-2"></div>
+    <div class="mesh-blob blob-3"></div>
+  </div>
+
+  <!-- Global floating theme toggle (visible on welcome screen) -->
+  <button id="themeToggleWelcome" class="theme-toggle-btn welcome-toggle" title="Toggle Theme">
+    <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+    <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+  </button>
+
   <!-- ===== Welcome / Room screen ===== -->
   <div id="welcomeScreen" class="welcome">
     <div class="welcome-card">
@@ -29,18 +50,20 @@
       </p>
 
       <form id="roomForm" class="room-form">
-        <input
-          type="text"
-          id="roomInput"
-          class="room-input"
-          placeholder="e.g. sachin-2024"
-          autocomplete="off"
-          required
-        />
-        <button type="submit" class="btn-add">Join</button>
+        <div class="input-glow-wrap">
+          <input
+            type="text"
+            id="roomInput"
+            class="room-input"
+            placeholder="e.g. sachin-2024"
+            autocomplete="off"
+            required
+          />
+        </div>
+        <button type="submit" class="btn-join">Join Room</button>
       </form>
       <p class="welcome-tip">
-        💡 Tip: pick something hard to guess (it keeps your data private).
+        💡 Tip: pick something hard to guess (keeps your data private).
       </p>
     </div>
   </div>
@@ -50,54 +73,110 @@
     <!-- Header + Search + Sync -->
     <header class="header">
       <div class="header-row">
-        <h1 class="title">📝 Remember</h1>
-        <button id="syncBtn" class="sync-btn" title="Sync status">
-          <span id="syncDot" class="sync-dot saving"></span>
-          <span id="syncText" class="sync-text">connecting…</span>
-        </button>
+        <div class="header-title-area">
+          <h1 class="title">📝 Remember</h1>
+          <div id="roomDisplay" class="room-display">
+            <span class="room-label">room:</span>
+            <span id="roomCodeText" class="room-code-text">...</span>
+            <button id="shareBtn" class="share-btn" title="Copy Invite Link">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+            </button>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="themeToggleApp" class="theme-toggle-btn" title="Toggle Theme">
+            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+          <button id="syncBtn" class="sync-btn" title="Sync status">
+            <span id="syncDot" class="sync-dot saving"></span>
+            <span id="syncText" class="sync-text">connecting…</span>
+          </button>
+        </div>
       </div>
       <div class="search-wrap">
+        <span class="search-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </span>
         <input
           type="search"
           id="searchInput"
           class="search-input"
-          placeholder="Search..."
+          placeholder="Search your items..."
           autocomplete="off"
         />
       </div>
     </header>
 
-    <!-- Add new item -->
+    <!-- Add new item (Two-row Expanded Layout) -->
     <form id="addForm" class="add-form">
-      <input
-        type="text"
-        id="textInput"
-        class="text-input"
-        placeholder="Add a task or note..."
-        autocomplete="off"
-        required
-      />
-      <input
-        type="text"
-        id="tagSelect"
-        class="select"
-        list="tagList"
-        placeholder="#tag"
-        title="Tag (type your own or pick one)"
-        autocomplete="off"
-      />
-      <datalist id="tagList">
-        <option value="work"></option>
-        <option value="home"></option>
-        <option value="personal"></option>
-        <option value="ideas"></option>
-      </datalist>
-      <select id="typeSelect" class="select" title="Type">
-        <option value="task">Task</option>
-        <option value="note">Note</option>
-      </select>
-      <button type="submit" class="btn-add">Add</button>
+      <!-- Row 1: Description Input -->
+      <div class="text-input-wrap">
+        <input
+          type="text"
+          id="textInput"
+          class="text-input"
+          placeholder="Write a task or note..."
+          autocomplete="off"
+          required
+        />
+      </div>
+      
+      <!-- Row 2: Secondary Inputs -->
+      <div class="add-form-row-2">
+        <div class="tag-input-wrap">
+          <input
+            type="text"
+            id="tagSelect"
+            class="select tag-select"
+            list="tagList"
+            placeholder="#tag"
+            title="Tag (type your own or pick one)"
+            autocomplete="off"
+          />
+          <datalist id="tagList">
+            <option value="work"></option>
+            <option value="home"></option>
+            <option value="personal"></option>
+            <option value="ideas"></option>
+          </datalist>
+        </div>
+        
+        <div class="date-input-wrap">
+          <input type="date" id="dueDateInput" class="select date-input" title="Due Date" />
+        </div>
+        
+        <div class="priority-input-wrap">
+          <select id="prioritySelect" class="select priority-select" title="Priority">
+            <option value="low">Low Priority</option>
+            <option value="medium" selected>Medium Priority</option>
+            <option value="high">High Priority</option>
+          </select>
+        </div>
+        
+        <!-- Segmented Slide Toggle for Task vs Note -->
+        <div class="segmented-control">
+          <input type="radio" id="typeTask" name="itemType" value="task" checked />
+          <label for="typeTask" class="segment-btn">Task</label>
+          
+          <input type="radio" id="typeNote" name="itemType" value="note" />
+          <label for="typeNote" class="segment-btn">Note</label>
+          
+          <span class="segment-slider"></span>
+        </div>
+        
+        <button type="submit" class="btn-add">Add</button>
+      </div>
     </form>
+
+    <!-- Dashboard Tabs -->
+    <div class="tabs-container">
+      <button class="tab-link active" data-tab="all">All</button>
+      <button class="tab-link" data-tab="tasks">Tasks</button>
+      <button class="tab-link" data-tab="notes">Notes</button>
+      <button class="tab-link" data-tab="completed">Completed</button>
+      <span class="tabs-slider"></span>
+    </div>
 
     <!-- Tag filters -->
     <div id="tagFilters" class="tag-filters"></div>
@@ -106,16 +185,44 @@
     <ul id="itemList" class="item-list"></ul>
 
     <!-- Empty state -->
-    <p id="emptyState" class="empty-state">
-      Nothing here yet. Add your first task or note above! 👆
-    </p>
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">✨</div>
+      <p>Nothing here yet. Add your first task or note above!</p>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
       <span id="counter"></span>
-      <button id="clearDone" class="link-btn">Clear done</button>
+      <button id="clearDone" class="link-btn">Clear completed tasks</button>
     </footer>
   </div>
+
+  <!-- ===== Custom Dialog Modals ===== -->
+  <div id="customAlert" class="dialog-overlay" style="display:none">
+    <div class="dialog-card">
+      <div class="dialog-icon danger">⚠️</div>
+      <h3 class="dialog-title" id="customAlertTitle">Alert</h3>
+      <p class="dialog-message" id="customAlertMessage">Something went wrong.</p>
+      <div class="dialog-actions">
+        <button id="customAlertOk" class="btn-dialog-primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="customConfirm" class="dialog-overlay" style="display:none">
+    <div class="dialog-card">
+      <div class="dialog-icon question">❓</div>
+      <h3 class="dialog-title" id="customConfirmTitle">Confirm Action</h3>
+      <p class="dialog-message" id="customConfirmMessage">Are you sure you want to proceed?</p>
+      <div class="dialog-actions">
+        <button id="customConfirmCancel" class="btn-dialog-secondary">Cancel</button>
+        <button id="customConfirmOk" class="btn-dialog-primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Toast Notification ===== -->
+  <div id="toast" class="toast" style="display:none">Link Copied!</div>
 
   <script type="module" src="app.js"></script>
 </body>
