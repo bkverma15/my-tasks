@@ -129,9 +129,10 @@ const ROOM_KEY = "rememberApp.room";
 let state = {
   room: "", // current room code
   items: [], // { id, type, text, tag, done, priority, dueDate, createdAt, image }
+  trash: [], // deleted items (can be restored)
   search: "", // current search text
   activeTag: "", // "" = All
-  activeTab: "all", // "all" | "tasks" | "notes" | "completed"
+  activeTab: "all", // "all" | "tasks" | "notes" | "completed" | "trash"
   unsub: null, // unsubscribe from onSnapshot
   ready: false, // got first snapshot?
   editingId: null, // ID of the item currently being edited
@@ -383,6 +384,7 @@ function joinRoom(roomCode) {
     (snap) => {
       const data = snap.data();
       state.items = data && Array.isArray(data.items) ? data.items : [];
+      state.trash = data && Array.isArray(data.trash) ? data.trash : [];
       state.ready = true;
       setSyncStatus("saved");
       render();
@@ -400,7 +402,7 @@ async function persist() {
   setSyncStatus("saving");
   try {
     const ref = doc(db, "rooms", state.room);
-    await setDoc(ref, { items: state.items, updatedAt: Date.now() });
+    await setDoc(ref, { items: state.items, trash: state.trash, updatedAt: Date.now() });
     setTimeout(() => {
       if (syncDot.className.indexOf("saving") !== -1) setSyncStatus("saved");
     }, 1500);
@@ -502,13 +504,49 @@ function updateItemText(id, newText) {
 }
 
 function deleteItem(id) {
-  state.items = state.items.filter((i) => i.id !== id);
+  // Move to trash instead of permanent delete
+  const item = state.items.find((i) => i.id === id);
+  if (item) {
+    state.trash.unshift({ ...item, deletedAt: Date.now() });
+    state.items = state.items.filter((i) => i.id !== id);
+    persist();
+    render();
+    showToast("Moved to Trash 🗑️");
+  }
+}
+
+function restoreItem(id) {
+  const item = state.trash.find((i) => i.id === id);
+  if (item) {
+    // Remove deletedAt timestamp before restoring
+    const { deletedAt, ...restored } = item;
+    state.items.unshift(restored);
+    state.trash = state.trash.filter((i) => i.id !== id);
+    persist();
+    render();
+    showToast("Restored! ✅");
+  }
+}
+
+function permanentDelete(id) {
+  state.trash = state.trash.filter((i) => i.id !== id);
+  persist();
+  render();
+}
+
+function emptyTrash() {
+  state.trash = [];
   persist();
   render();
 }
 
 function clearDone() {
   const before = state.items.length;
+  // Move completed tasks to trash instead of direct deletion
+  const completedItems = state.items.filter((i) => i.type === "task" && i.done);
+  completedItems.forEach((item) => {
+    state.trash.unshift({ ...item, deletedAt: Date.now() });
+  });
   state.items = state.items.filter((i) => !(i.type === "task" && i.done));
   if (state.items.length !== before) {
     persist();
@@ -551,6 +589,18 @@ function sortedItems() {
 }
 
 function visibleItems() {
+  // Trash tab shows trash array, not items array
+  if (state.activeTab === "trash") {
+    const q = state.search.trim().toLowerCase();
+    return state.trash.filter((item) => {
+      if (q) {
+        const hay = (item.text + " " + (item.tag || "")).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+  }
+
   const q = state.search.trim().toLowerCase();
   return sortedItems().filter((item) => {
     // 1. Tab categorizations
@@ -620,9 +670,9 @@ function renderTagFilters() {
   }
 }
 
-function renderItem(item) {
+function renderItem(item, isTrash = false) {
   const li = document.createElement("li");
-  li.className = "item" + (item.done ? " done" : "");
+  li.className = "item" + (item.done ? " done" : "") + (isTrash ? " trashed" : "");
   
   if (item.type === "task") {
     const p = item.priority || "medium";
@@ -771,52 +821,80 @@ function renderItem(item) {
   const actions = document.createElement("div");
   actions.className = "item-actions";
 
-  if (!item.done && !isEditing) {
-    const editBtn = document.createElement("button");
-    editBtn.type = "button";
-    editBtn.className = "item-action-btn edit-btn";
-    editBtn.title = "Edit item";
-    editBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
-    editBtn.addEventListener("click", () => {
-      state.editingId = item.id;
-      render();
+  // Actions: show different buttons based on trash mode
+  if (isTrash) {
+    // RESTORE button
+    const restoreBtn = document.createElement("button");
+    restoreBtn.type = "button";
+    restoreBtn.className = "item-action-btn restore-btn";
+    restoreBtn.title = "Restore item";
+    restoreBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.87"></path></svg>`;
+    restoreBtn.addEventListener("click", () => restoreItem(item.id));
+    actions.appendChild(restoreBtn);
+
+    // PERMANENT DELETE button
+    const permDel = document.createElement("button");
+    permDel.type = "button";
+    permDel.className = "item-action-btn delete-btn";
+    permDel.title = "Delete permanently";
+    permDel.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4h6v2"></path></svg>`;
+    permDel.addEventListener("click", async () => {
+      const ok = await showCustomConfirm("Delete Forever?", `"${item.text.slice(0, 50)}" will be permanently deleted. This cannot be undone.`);
+      if (ok) permanentDelete(item.id);
     });
-    actions.appendChild(editBtn);
+    actions.appendChild(permDel);
+  } else {
+    // EDIT button (normal mode)
+    if (!item.done && !isEditing) {
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "item-action-btn edit-btn";
+      editBtn.title = "Edit item";
+      editBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
+      editBtn.addEventListener("click", () => {
+        state.editingId = item.id;
+        render();
+      });
+      actions.appendChild(editBtn);
+    }
+
+    if (!isEditing) {
+      // COPY button
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "item-action-btn copy-btn";
+      copyBtn.title = "Copy content";
+      copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(item.text)
+          .then(() => showToast("Copied to clipboard!"))
+          .catch((err) => console.error("Copy failed:", err));
+      });
+      actions.appendChild(copyBtn);
+
+      // WHATSAPP button
+      const waBtn = document.createElement("button");
+      waBtn.type = "button";
+      waBtn.className = "item-action-btn wa-btn";
+      waBtn.title = "Share on WhatsApp";
+      waBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`;
+      waBtn.addEventListener("click", () => {
+        const textToShare = encodeURIComponent(item.text);
+        const waUrl = `https://wa.me/?text=${textToShare}`;
+        window.open(waUrl, "_blank");
+      });
+      actions.appendChild(waBtn);
+
+      // DELETE (move to trash) button
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "item-action-btn delete-btn";
+      del.title = "Move to Trash";
+      del.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4h6v2"></path></svg>`;
+      del.addEventListener("click", () => deleteItem(item.id));
+      actions.appendChild(del);
+    }
   }
-
-  if (!isEditing) {
-    const copyBtn = document.createElement("button");
-    copyBtn.type = "button";
-    copyBtn.className = "item-action-btn copy-btn";
-    copyBtn.title = "Copy content";
-    copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-    copyBtn.addEventListener("click", () => {
-      navigator.clipboard.writeText(item.text)
-        .then(() => showToast("Copied to clipboard!"))
-        .catch((err) => console.error("Copy failed:", err));
-    });
-    actions.appendChild(copyBtn);
-
-    const waBtn = document.createElement("button");
-    waBtn.type = "button";
-    waBtn.className = "item-action-btn wa-btn";
-    waBtn.title = "Share on WhatsApp";
-    waBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`;
-    waBtn.addEventListener("click", () => {
-      const textToShare = encodeURIComponent(item.text);
-      const waUrl = `https://wa.me/?text=${textToShare}`;
-      window.open(waUrl, "_blank");
-    });
-    actions.appendChild(waBtn);
-  }
-
-  const del = document.createElement("button");
-  del.type = "button";
-  del.className = "item-action-btn delete-btn";
-  del.title = "Delete item";
-  del.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-  del.addEventListener("click", () => deleteItem(item.id));
-  actions.appendChild(del);
 
   li.appendChild(actions);
 
@@ -838,22 +916,34 @@ function renderCounter() {
 }
 
 function render() {
+  // Hide/show tag filters for trash tab
+  tagFiltersEl.style.display = state.activeTab === "trash" ? "none" : "";
   renderTagFilters();
+
+  // Update trash count badge
+  const trashCountEl = document.getElementById("trashCount");
+  if (trashCountEl) {
+    trashCountEl.textContent = state.trash.length > 0 ? state.trash.length : "";
+  }
 
   const visible = visibleItems();
   itemListEl.innerHTML = "";
   if (visible.length === 0) {
     itemListEl.style.display = "none";
     emptyStateEl.style.display = "flex";
-    emptyStateEl.querySelector("p").textContent =
-      state.items.length === 0
-        ? "Nothing here yet. Add your first task or note above! 👆"
-        : "No items match your filters. 🔍";
+    if (state.activeTab === "trash") {
+      emptyStateEl.querySelector("p").textContent = "Trash is empty. Deleted items will appear here. 🗑️";
+    } else {
+      emptyStateEl.querySelector("p").textContent =
+        state.items.length === 0
+          ? "Nothing here yet. Add your first task or note above! 👆"
+          : "No items match your filters. 🔍";
+    }
   } else {
     itemListEl.style.display = "";
     emptyStateEl.style.display = "none";
     const frag = document.createDocumentFragment();
-    visible.forEach((item) => frag.appendChild(renderItem(item)));
+    visible.forEach((item) => frag.appendChild(renderItem(item, state.activeTab === "trash")));
     itemListEl.appendChild(frag);
   }
 
@@ -861,9 +951,15 @@ function render() {
   
   clearDoneBtn.style.display = state.items.some(
     (i) => i.type === "task" && i.done
-  )
+  ) && state.activeTab !== "trash"
     ? "inline-block"
     : "none";
+
+  // Show/hide empty trash button
+  const emptyTrashBtn = document.getElementById("emptyTrashBtn");
+  if (emptyTrashBtn) {
+    emptyTrashBtn.style.display = state.activeTab === "trash" && state.trash.length > 0 ? "inline-block" : "none";
+  }
 
   // Re-adjust active tab slider position
   const activeTabBtn = document.querySelector(".tab-link.active");
@@ -922,7 +1018,18 @@ searchInput.addEventListener("input", () => {
   render();
 });
 
-clearDoneBtn.addEventListener("click", clearDone);
+clearDoneBtn.addEventListener("click", async () => {
+  const hasDone = state.items.some((i) => i.type === "task" && i.done);
+  if (!hasDone) return;
+  const ok = await showCustomConfirm("Move to Trash?", "All completed tasks will be moved to Trash. You can restore them later.");
+  if (ok) clearDone();
+});
+
+document.getElementById("emptyTrashBtn").addEventListener("click", async () => {
+  if (state.trash.length === 0) return;
+  const ok = await showCustomConfirm("Empty Trash?", `Permanently delete all ${state.trash.length} item(s) in the trash? This cannot be undone.`);
+  if (ok) emptyTrash();
+});
 
 function leaveRoom() {
   showCustomConfirm("Leave Room?", "Are you sure you want to leave this room and join a different one? Your code keeps your room accessible.").then((confirmed) => {
