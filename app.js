@@ -641,6 +641,32 @@ function renderItem(item) {
     actions.appendChild(editBtn);
   }
 
+  if (!isEditing) {
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "item-action-btn copy-btn";
+    copyBtn.title = "Copy content";
+    copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+    copyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(item.text)
+        .then(() => showToast("Copied to clipboard!"))
+        .catch((err) => console.error("Copy failed:", err));
+    });
+    actions.appendChild(copyBtn);
+
+    const waBtn = document.createElement("button");
+    waBtn.type = "button";
+    waBtn.className = "item-action-btn wa-btn";
+    waBtn.title = "Share on WhatsApp";
+    waBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`;
+    waBtn.addEventListener("click", () => {
+      const textToShare = encodeURIComponent(item.text);
+      const waUrl = `https://wa.me/?text=${textToShare}`;
+      window.open(waUrl, "_blank");
+    });
+    actions.appendChild(waBtn);
+  }
+
   const del = document.createElement("button");
   del.type = "button";
   del.className = "item-action-btn delete-btn";

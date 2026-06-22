@@ -1097,6 +1097,16 @@ body {
   color: var(--primary);
 }
 
+.item-action-btn.copy-btn:hover {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.item-action-btn.wa-btn:hover {
+  color: #25d366;
+  background: rgba(37, 211, 102, 0.1);
+}
+
 .item-action-btn.delete-btn:hover {
   color: var(--danger);
   background: rgba(239, 68, 68, 0.1);
