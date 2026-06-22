@@ -123,12 +123,12 @@ function showToast(message) {
   }, 2000);
 }
 
-/* ---------- State ---------- */
+/* ---------- State & Upload variables ---------- */
 
 const ROOM_KEY = "rememberApp.room";
 let state = {
   room: "", // current room code
-  items: [], // { id, type, text, tag, done, priority, dueDate, createdAt }
+  items: [], // { id, type, text, tag, done, priority, dueDate, createdAt, image }
   search: "", // current search text
   activeTag: "", // "" = All
   activeTab: "all", // "all" | "tasks" | "notes" | "completed"
@@ -137,7 +137,9 @@ let state = {
   editingId: null, // ID of the item currently being edited
 };
 
-/* ---------- DOM ---------- */
+let currentBase64Image = null; // Stores temporary image file before submission
+
+/* ---------- DOM Selectors ---------- */
 
 const welcomeScreen = document.getElementById("welcomeScreen");
 const appEl = document.getElementById("app");
@@ -163,6 +165,48 @@ const clearDoneBtn = document.getElementById("clearDone");
 const syncDot = document.getElementById("syncDot");
 const syncText = document.getElementById("syncText");
 const syncBtn = document.getElementById("syncBtn");
+
+// Image uploader DOM elements
+const imageInput = document.getElementById("imageInput");
+const attachBtn = document.getElementById("attachBtn");
+const formImagePreview = document.getElementById("formImagePreview");
+const previewImg = document.getElementById("previewImg");
+const removePreviewBtn = document.getElementById("removePreviewBtn");
+
+/* ---------- Image Compressor Utility ---------- */
+
+function compressImage(file, maxWidth = 600, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.src = e.target.result;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Output compressed JPEG
+        const compressedBase64 = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressedBase64);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+}
 
 const getSelectedType = () => document.querySelector('input[name="itemType"]:checked')?.value || "task";
 
@@ -361,11 +405,19 @@ function addItem(text, tag, type) {
     done: false,
     priority: selectedType === "task" ? prioritySelect.value : null,
     dueDate: selectedType === "task" ? dueDateInput.value : null,
+    image: currentBase64Image, // Save the image base64
     createdAt: Date.now(),
   };
   
   state.items.unshift(item);
   persist();
+
+  // Reset uploader inputs and preview container
+  currentBase64Image = null;
+  imageInput.value = "";
+  formImagePreview.style.display = "none";
+  previewImg.src = "";
+
   render();
 }
 
@@ -622,6 +674,22 @@ function renderItem(item) {
     body.appendChild(metaContainer);
   }
 
+  // Append image attachment inside the card if present
+  if (item.image && !isEditing) {
+    const imgWrap = document.createElement("div");
+    imgWrap.className = "item-image-wrap";
+    
+    const img = document.createElement("img");
+    img.className = "item-img";
+    img.src = item.image;
+    img.alt = "Attachment";
+    img.loading = "lazy";
+    img.addEventListener("click", () => openLightbox(item.image));
+    
+    imgWrap.appendChild(img);
+    body.appendChild(imgWrap);
+  }
+
   li.appendChild(body);
 
   // Actions Container (Edit + Delete)
@@ -818,6 +886,56 @@ syncBtn.addEventListener("click", () => {
   if (syncClicks >= 3) {
     syncClicks = 0;
     leaveRoom();
+  }
+});
+
+/* ---------- Image Upload Event Listeners ---------- */
+
+attachBtn.addEventListener("click", () => {
+  imageInput.click();
+});
+
+imageInput.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    attachBtn.classList.add("loading");
+    const base64 = await compressImage(file);
+    currentBase64Image = base64;
+    previewImg.src = base64;
+    formImagePreview.style.display = "block";
+  } catch (err) {
+    console.error("Image compression failed:", err);
+    showCustomAlert("Error Loading Image", "Could not load or compress the selected image file.");
+  } finally {
+    attachBtn.classList.remove("loading");
+  }
+});
+
+removePreviewBtn.addEventListener("click", () => {
+  currentBase64Image = null;
+  imageInput.value = "";
+  formImagePreview.style.display = "none";
+  previewImg.src = "";
+});
+
+/* ---------- Lightbox Modal Methods ---------- */
+
+function openLightbox(src) {
+  const lightbox = document.getElementById("imageLightbox");
+  const img = document.getElementById("lightboxImg");
+  img.src = src;
+  lightbox.style.display = "flex";
+}
+
+document.getElementById("closeLightbox").addEventListener("click", () => {
+  document.getElementById("imageLightbox").style.display = "none";
+});
+
+// Close lightbox when clicking outside the image
+document.getElementById("imageLightbox").addEventListener("click", (e) => {
+  if (e.target.id === "imageLightbox") {
+    document.getElementById("imageLightbox").style.display = "none";
   }
 });
 

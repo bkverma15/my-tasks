@@ -124,6 +124,12 @@
           required
         />
       </div>
+
+      <!-- Image attachment preview -->
+      <div id="formImagePreview" class="form-image-preview" style="display: none;">
+        <img id="previewImg" src="" alt="Image Preview" />
+        <button type="button" id="removePreviewBtn" class="remove-preview-btn" title="Remove image">&times;</button>
+      </div>
       
       <!-- Row 2: Secondary Inputs -->
       <div class="add-form-row-2">
@@ -155,6 +161,14 @@
             <option value="medium" selected>Medium Priority</option>
             <option value="high">High Priority</option>
           </select>
+        </div>
+
+        <!-- Image file upload input & trigger button -->
+        <div class="file-input-wrap">
+          <input type="file" id="imageInput" accept="image/*" style="display: none;" />
+          <button type="button" id="attachBtn" class="attach-btn" title="Attach Image">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+          </button>
         </div>
         
         <!-- Segmented Slide Toggle for Task vs Note -->
@@ -226,6 +240,14 @@
 
   <!-- ===== Toast Notification ===== -->
   <div id="toast" class="toast" style="display:none">Link Copied!</div>
+
+  <!-- ===== Image Lightbox Modal ===== -->
+  <div id="imageLightbox" class="dialog-overlay lightbox-overlay" style="display:none">
+    <div class="lightbox-content">
+      <img id="lightboxImg" src="" alt="Zoomed View" />
+      <button id="closeLightbox" class="close-lightbox-btn" title="Close Lightbox">&times;</button>
+    </div>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>
