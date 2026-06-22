@@ -424,7 +424,7 @@ body {
   letter-spacing: 0.2px;
 }
 
-.share-btn {
+.share-btn, .leave-btn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
@@ -442,7 +442,13 @@ body {
   transform: scale(1.05);
 }
 
-.share-btn:active {
+.leave-btn:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+  transform: scale(1.05);
+}
+
+.share-btn:active, .leave-btn:active {
   transform: scale(0.95);
 }
 

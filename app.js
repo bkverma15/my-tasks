@@ -754,6 +754,34 @@ searchInput.addEventListener("input", () => {
 
 clearDoneBtn.addEventListener("click", clearDone);
 
+function leaveRoom() {
+  showCustomConfirm("Leave Room?", "Are you sure you want to leave this room and join a different one? Your code keeps your room accessible.").then((confirmed) => {
+    if (confirmed) {
+      if (state.unsub) state.unsub();
+      state.unsub = null;
+      state.room = "";
+      state.items = [];
+      try {
+        localStorage.removeItem(ROOM_KEY);
+      } catch {}
+      
+      // Clear room query parameter from the URL
+      const url = new URL(window.location);
+      url.searchParams.delete("room");
+      window.history.pushState({}, "", url);
+      
+      appEl.style.display = "none";
+      welcomeScreen.style.display = "flex";
+      roomDisplay.style.display = "none";
+      roomInput.value = "";
+      roomInput.focus();
+    }
+  });
+}
+
+const leaveRoomBtn = document.getElementById("leaveRoomBtn");
+leaveRoomBtn.addEventListener("click", leaveRoom);
+
 // click sync button to leave room (change room)
 let syncClicks = 0;
 let syncClickTimer = null;
@@ -763,22 +791,7 @@ syncBtn.addEventListener("click", () => {
   syncClickTimer = setTimeout(() => (syncClicks = 0), 600);
   if (syncClicks >= 3) {
     syncClicks = 0;
-    showCustomConfirm("Leave Room?", "Are you sure you want to leave this room and join a different one? Your code keeps your room accessible.").then((confirmed) => {
-      if (confirmed) {
-        if (state.unsub) state.unsub();
-        state.unsub = null;
-        state.room = "";
-        state.items = [];
-        try {
-          localStorage.removeItem(ROOM_KEY);
-        } catch {}
-        appEl.style.display = "none";
-        welcomeScreen.style.display = "flex";
-        roomDisplay.style.display = "none";
-        roomInput.value = "";
-        roomInput.focus();
-      }
-    });
+    leaveRoom();
   }
 });
 
