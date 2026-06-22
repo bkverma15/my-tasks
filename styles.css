@@ -607,7 +607,7 @@ body {
   width: 100%;
 }
 
-.date-input-wrap, .priority-input-wrap {
+.date-input-wrap, .priority-input-wrap, .repeat-input-wrap {
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
@@ -1034,6 +1034,36 @@ body {
   color: var(--done-text) !important;
   border: 1px solid var(--border) !important;
   animation: none !important;
+}
+
+.repeat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--tag-text);
+  border: 1px solid rgba(99, 102, 241, 0.22);
+}
+
+.light-theme .repeat-badge {
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #e0e7ff;
+}
+
+.repeat-badge.done {
+  background: var(--card-hover) !important;
+  color: var(--done-text) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.repeat-icon {
+  margin-top: -1px;
 }
 
 @keyframes overdueBlink {

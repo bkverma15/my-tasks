@@ -155,6 +155,7 @@ const textInput = document.getElementById("textInput");
 const tagSelect = document.getElementById("tagSelect");
 const dueDateInput = document.getElementById("dueDateInput");
 const prioritySelect = document.getElementById("prioritySelect");
+const repeatSelect = document.getElementById("repeatSelect");
 const searchInput = document.getElementById("searchInput");
 const tagFiltersEl = document.getElementById("tagFilters");
 const itemListEl = document.getElementById("itemList");
@@ -215,6 +216,7 @@ const typeTaskRadio = document.getElementById("typeTask");
 const typeNoteRadio = document.getElementById("typeNote");
 const dueDateWrap = document.querySelector(".date-input-wrap");
 const priorityWrap = document.querySelector(".priority-input-wrap");
+const repeatWrap = document.querySelector(".repeat-input-wrap");
 
 function updateFormFieldsVisibility() {
   const selectedType = getSelectedType();
@@ -223,11 +225,15 @@ function updateFormFieldsVisibility() {
     dueDateWrap.style.pointerEvents = "none";
     priorityWrap.style.opacity = "0.3";
     priorityWrap.style.pointerEvents = "none";
+    repeatWrap.style.opacity = "0.3";
+    repeatWrap.style.pointerEvents = "none";
   } else {
     dueDateWrap.style.opacity = "1";
     dueDateWrap.style.pointerEvents = "auto";
     priorityWrap.style.opacity = "1";
     priorityWrap.style.pointerEvents = "auto";
+    repeatWrap.style.opacity = "1";
+    repeatWrap.style.pointerEvents = "auto";
   }
 }
 typeTaskRadio.addEventListener("change", updateFormFieldsVisibility);
@@ -304,6 +310,38 @@ function getDueDateInfo(dueDateStr) {
   } else {
     return { text: formattedDate, class: "future" };
   }
+}
+
+// Calculates the next due date based on the current due date and repeat interval
+function calculateNextDueDate(currentDueDateStr, repeatInterval) {
+  let baseDate = new Date();
+  if (currentDueDateStr) {
+    const parts = currentDueDateStr.split("-");
+    baseDate = new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  baseDate.setHours(0, 0, 0, 0);
+
+  switch (repeatInterval) {
+    case "daily":
+      baseDate.setDate(baseDate.getDate() + 1);
+      break;
+    case "weekly":
+      baseDate.setDate(baseDate.getDate() + 7);
+      break;
+    case "monthly":
+      baseDate.setMonth(baseDate.getMonth() + 1);
+      break;
+    case "yearly":
+      baseDate.setFullYear(baseDate.getFullYear() + 1);
+      break;
+    default:
+      break;
+  }
+
+  const yyyy = baseDate.getFullYear();
+  const mm = String(baseDate.getMonth() + 1).padStart(2, '0');
+  const dd = String(baseDate.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 /* ---------- Room management ---------- */
@@ -391,7 +429,7 @@ shareBtn.addEventListener("click", copyRoomLink);
 
 /* ---------- Core actions ---------- */
 
-function addItem(text, tag, type) {
+function addItem(text, tag, type, repeatVal) {
   const trimmed = text.trim();
   if (!trimmed) return;
   
@@ -405,6 +443,7 @@ function addItem(text, tag, type) {
     done: false,
     priority: selectedType === "task" ? prioritySelect.value : null,
     dueDate: selectedType === "task" ? dueDateInput.value : null,
+    repeat: selectedType === "task" ? (repeatVal || "none") : "none",
     image: currentBase64Image, // Save the image base64
     createdAt: Date.now(),
   };
@@ -422,9 +461,31 @@ function addItem(text, tag, type) {
 }
 
 function toggleDone(id) {
-  const item = state.items.find((i) => i.id === id);
-  if (item) {
+  const itemIndex = state.items.findIndex((i) => i.id === id);
+  if (itemIndex !== -1) {
+    const item = state.items[itemIndex];
+    const originalDone = item.done;
     item.done = !item.done;
+
+    // If marked complete and it is a recurring task, schedule the next one
+    if (!originalDone && item.done && item.type === "task" && item.repeat && item.repeat !== "none") {
+      const baseDueDate = item.dueDate || new Date().toISOString().split("T")[0];
+      const nextDueDate = calculateNextDueDate(baseDueDate, item.repeat);
+      
+      const nextOccurrence = {
+        ...item,
+        id: uniqueId(),
+        done: false,
+        dueDate: nextDueDate,
+        createdAt: Date.now(),
+      };
+      
+      // Clear recurrence from the completed instance to prevent duplicate triggers
+      item.repeat = "none";
+      
+      state.items.unshift(nextOccurrence);
+    }
+
     persist();
     render();
   }
@@ -670,6 +731,20 @@ function renderItem(item) {
     }
   }
 
+  // 4. Repeat Badge
+  if (item.type === "task" && item.repeat && item.repeat !== "none" && !isEditing) {
+    const repeatLabels = {
+      daily: "Daily",
+      weekly: "Weekly",
+      monthly: "Monthly",
+      yearly: "Yearly",
+    };
+    const repeatBadge = document.createElement("span");
+    repeatBadge.className = "repeat-badge" + (item.done ? " done" : "");
+    repeatBadge.innerHTML = `<svg class="repeat-icon" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg> ${repeatLabels[item.repeat] || item.repeat}`;
+    metaContainer.appendChild(repeatBadge);
+  }
+
   if (metaContainer.children.length > 0) {
     body.appendChild(metaContainer);
   }
@@ -833,11 +908,12 @@ roomForm.addEventListener("submit", (e) => {
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
-  addItem(textInput.value, tagSelect.value, getSelectedType());
+  addItem(textInput.value, tagSelect.value, getSelectedType(), repeatSelect.value);
   textInput.value = "";
   tagSelect.value = "";
   dueDateInput.value = "";
   prioritySelect.value = "medium";
+  repeatSelect.value = "none";
   textInput.focus();
 });
 
