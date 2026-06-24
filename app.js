@@ -128,11 +128,12 @@ function showToast(message) {
 const ROOM_KEY = "rememberApp.room";
 let state = {
   room: "", // current room code
-  items: [], // { id, type, text, tag, done, priority, dueDate, createdAt, image }
+  items: [], // { id, type, text, tag, done, priority, dueDate, createdAt, image, pinned }
   trash: [], // deleted items (can be restored)
+  activities: [], // { id, text, detail, time } (history logs)
   search: "", // current search text
   activeTag: "", // "" = All
-  activeTab: "all", // "all" | "tasks" | "notes" | "completed" | "trash"
+  activeTab: "dashboard", // Default to dashboard! "dashboard" | "tasks" | "notes" | "completed" | "trash"
   unsub: null, // unsubscribe from onSnapshot
   ready: false, // got first snapshot?
   editingId: null, // ID of the item currently being edited
@@ -174,6 +175,23 @@ const attachBtn = document.getElementById("attachBtn");
 const formImagePreview = document.getElementById("formImagePreview");
 const previewImg = document.getElementById("previewImg");
 const removePreviewBtn = document.getElementById("removePreviewBtn");
+
+// New Redesign Selectors
+const quickAddModal = document.getElementById("quickAddModal");
+const quickAddBtn = document.getElementById("quickAddBtn");
+const mobileQuickAddBtn = document.getElementById("mobileQuickAddBtn");
+const closeQuickAdd = document.getElementById("closeQuickAdd");
+const greetingText = document.getElementById("greetingText");
+const greetingSubText = document.getElementById("greetingSubText");
+const dashboardView = document.getElementById("dashboardView");
+const listViewPanel = document.getElementById("listViewPanel");
+const upcomingTasksList = document.getElementById("upcomingTasksList");
+const upcomingTasksBadge = document.getElementById("upcomingTasksBadge");
+const viewAllTasksLink = document.getElementById("viewAllTasksLink");
+const pinnedNotesList = document.getElementById("pinnedNotesList");
+const activityList = document.getElementById("activityList");
+const clearHistoryLink = document.getElementById("clearHistoryLink");
+const topSyncStatusText = document.getElementById("topSyncStatusText");
 
 /* ---------- Image Compressor Utility ---------- */
 
@@ -246,6 +264,19 @@ function uniqueId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+function logActivity(text, detail = "") {
+  const activity = {
+    id: uniqueId(),
+    text: text,
+    detail: detail,
+    time: Date.now(),
+  };
+  state.activities.unshift(activity);
+  if (state.activities.length > 5) {
+    state.activities = state.activities.slice(0, 5);
+  }
+}
+
 function setSyncStatus(status) {
   // status: "connecting" | "saving" | "saved" | "error"
   syncDot.className = "sync-dot " + status;
@@ -260,6 +291,16 @@ function setSyncStatus(status) {
     status === "saved"
       ? "Your data is saved in the cloud and synced across devices."
       : labels[status];
+
+  if (topSyncStatusText) {
+    if (status === "saved") {
+      topSyncStatusText.textContent = "Syncing complete";
+    } else if (status === "saving" || status === "connecting") {
+      topSyncStatusText.textContent = "Syncing...";
+    } else {
+      topSyncStatusText.textContent = "Sync error";
+    }
+  }
 }
 
 // Generate tags styles dynamically based on hashing strings
@@ -370,7 +411,13 @@ function joinRoom(roomCode) {
   } catch {}
   
   welcomeScreen.style.display = "none";
-  appEl.style.display = "block";
+  appEl.style.display = "flex";
+  const welcomeThemeToggle = document.getElementById("themeToggleWelcome");
+  if (welcomeThemeToggle) welcomeThemeToggle.style.display = "none";
+  // Reset window scroll position to prevent layout cut-off issues
+  window.scrollTo(0, 0);
+  document.body.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
   setSyncStatus("connecting");
   
   // Set room texts
@@ -385,6 +432,7 @@ function joinRoom(roomCode) {
       const data = snap.data();
       state.items = data && Array.isArray(data.items) ? data.items : [];
       state.trash = data && Array.isArray(data.trash) ? data.trash : [];
+      state.activities = data && Array.isArray(data.activities) ? data.activities : [];
       state.ready = true;
       setSyncStatus("saved");
       render();
@@ -402,7 +450,12 @@ async function persist() {
   setSyncStatus("saving");
   try {
     const ref = doc(db, "rooms", state.room);
-    await setDoc(ref, { items: state.items, trash: state.trash, updatedAt: Date.now() });
+    await setDoc(ref, {
+      items: state.items,
+      trash: state.trash,
+      activities: state.activities,
+      updatedAt: Date.now(),
+    });
     setTimeout(() => {
       if (syncDot.className.indexOf("saving") !== -1) setSyncStatus("saved");
     }, 1500);
@@ -448,9 +501,11 @@ function addItem(text, tag, type, repeatVal) {
     repeat: selectedType === "task" ? (repeatVal || "none") : "none",
     image: currentBase64Image, // Save the image base64
     createdAt: Date.now(),
+    pinned: false,
   };
   
   state.items.unshift(item);
+  logActivity(`Created ${selectedType} '${trimmed}'`, selectedType === "task" ? "Added to tasks list" : "Added to notes list");
   persist();
 
   // Reset uploader inputs and preview container
@@ -469,6 +524,8 @@ function toggleDone(id) {
     const originalDone = item.done;
     item.done = !item.done;
 
+    logActivity(`${item.done ? "Completed" : "Reopened"} task '${item.text}'`, item.done ? "Marked as done" : "Marked as active");
+
     // If marked complete and it is a recurring task, schedule the next one
     if (!originalDone && item.done && item.type === "task" && item.repeat && item.repeat !== "none") {
       const baseDueDate = item.dueDate || new Date().toISOString().split("T")[0];
@@ -480,6 +537,7 @@ function toggleDone(id) {
         done: false,
         dueDate: nextDueDate,
         createdAt: Date.now(),
+        pinned: false,
       };
       
       // Clear recurrence from the completed instance to prevent duplicate triggers
@@ -497,10 +555,22 @@ function updateItemText(id, newText) {
   const item = state.items.find((i) => i.id === id);
   const trimmed = newText.trim();
   if (item && trimmed && item.text !== trimmed) {
+    const oldText = item.text;
     item.text = trimmed;
+    logActivity(`Edited item text`, `"${oldText.slice(0, 20)}..." -> "${trimmed.slice(0, 20)}..."`);
     persist();
   }
   render();
+}
+
+function togglePin(id) {
+  const item = state.items.find((i) => i.id === id);
+  if (item && item.type === "note") {
+    item.pinned = !item.pinned;
+    logActivity(`${item.pinned ? "Pinned" : "Unpinned"} note '${item.text}'`, item.pinned ? "Shown on dashboard" : "Removed from dashboard");
+    persist();
+    render();
+  }
 }
 
 function deleteItem(id) {
@@ -509,6 +579,7 @@ function deleteItem(id) {
   if (item) {
     state.trash.unshift({ ...item, deletedAt: Date.now() });
     state.items = state.items.filter((i) => i.id !== id);
+    logActivity(`Deleted item '${item.text}'`, "Moved to Trash");
     persist();
     render();
     showToast("Moved to Trash 🗑️");
@@ -522,6 +593,7 @@ function restoreItem(id) {
     const { deletedAt, ...restored } = item;
     state.items.unshift(restored);
     state.trash = state.trash.filter((i) => i.id !== id);
+    logActivity(`Restored item '${item.text}'`, "Moved back from Trash");
     persist();
     render();
     showToast("Restored! ✅");
@@ -529,13 +601,18 @@ function restoreItem(id) {
 }
 
 function permanentDelete(id) {
+  const item = state.trash.find((i) => i.id === id);
+  const title = item ? item.text : "item";
   state.trash = state.trash.filter((i) => i.id !== id);
+  logActivity(`Permanently deleted item`, `"${title.slice(0, 20)}..."`);
   persist();
   render();
 }
 
 function emptyTrash() {
+  const count = state.trash.length;
   state.trash = [];
+  logActivity("Emptied Trash", `Permanently deleted ${count} items`);
   persist();
   render();
 }
@@ -549,6 +626,7 @@ function clearDone() {
   });
   state.items = state.items.filter((i) => !(i.type === "task" && i.done));
   if (state.items.length !== before) {
+    logActivity("Cleared completed tasks", "Moved completed tasks to Trash");
     persist();
     render();
   }
@@ -859,6 +937,19 @@ function renderItem(item, isTrash = false) {
     }
 
     if (!isEditing) {
+      // PIN button (only for notes)
+      if (item.type === "note") {
+        const pinBtn = document.createElement("button");
+        pinBtn.type = "button";
+        pinBtn.className = "item-action-btn pin-btn" + (item.pinned ? " pinned" : "");
+        pinBtn.title = item.pinned ? "Unpin note" : "Pin note";
+        pinBtn.innerHTML = item.pinned
+          ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2L2 12h5l9 9v-5l5-5V2z"></path></svg>`
+          : `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="8" x2="22" y2="12"></line><line x1="12" y1="2" x2="22" y2="12"></line><path d="M12 2L2 12h5l9 9v-5l5-5V2z"></path></svg>`;
+        pinBtn.addEventListener("click", () => togglePin(item.id));
+        actions.appendChild(pinBtn);
+      }
+
       // COPY button
       const copyBtn = document.createElement("button");
       copyBtn.type = "button";
@@ -915,10 +1006,208 @@ function renderCounter() {
       : total + (total === 1 ? " item" : " items");
 }
 
+function getGreeting() {
+  const hr = new Date().getHours();
+  if (hr < 12) return "Good Morning";
+  if (hr < 17) return "Good Afternoon";
+  return "Good Evening";
+}
+
+function updateGreetingText() {
+  const greeting = getGreeting();
+  greetingText.textContent = `${greeting}, User`;
+  
+  const activeTasks = state.items.filter((i) => i.type === "task" && !i.done).length;
+  const pinnedNotes = state.items.filter((i) => i.type === "note" && i.pinned).length;
+  
+  if (state.ready) {
+    greetingSubText.textContent = `Syncing complete. You have ${activeTasks} active task${activeTasks === 1 ? "" : "s"} and ${pinnedNotes} pinned note${pinnedNotes === 1 ? "" : "s"}.`;
+  } else {
+    greetingSubText.textContent = "Connecting to room...";
+  }
+}
+
+function syncActiveTabHighlight(tab) {
+  document.querySelectorAll(".tab-link").forEach((btn) => {
+    if (btn.getAttribute("data-tab") === tab) {
+      btn.classList.add("active");
+      updateTabsSliderPosition(btn);
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+}
+
+function renderDashboard() {
+  // 1. Upcoming Tasks
+  upcomingTasksList.innerHTML = "";
+  const upcomingTasks = state.items.filter((item) => {
+    if (item.type !== "task" || item.done) return false;
+    if (!item.dueDate) return false;
+    const dueInfo = getDueDateInfo(item.dueDate);
+    return dueInfo && (dueInfo.class === "today" || dueInfo.class === "tomorrow" || dueInfo.class === "overdue");
+  });
+  
+  upcomingTasks.sort((a, b) => {
+    const aInfo = getDueDateInfo(a.dueDate);
+    const bInfo = getDueDateInfo(b.dueDate);
+    const order = { overdue: 1, today: 2, tomorrow: 3 };
+    const aVal = order[aInfo?.class] || 4;
+    const bVal = order[bInfo?.class] || 4;
+    return aVal - bVal;
+  });
+  
+  const displayTasks = upcomingTasks.slice(0, 4);
+  const todayCount = upcomingTasks.filter(t => {
+    const info = getDueDateInfo(t.dueDate);
+    return info && (info.class === "today" || info.class === "overdue");
+  }).length;
+  
+  upcomingTasksBadge.textContent = `${todayCount} Today`;
+  
+  if (displayTasks.length === 0) {
+    upcomingTasksList.innerHTML = `<li class="empty-list-placeholder" style="padding: 12px; color: var(--text-secondary); text-align: center;">No upcoming tasks! 🎉</li>`;
+  } else {
+    displayTasks.forEach((task) => {
+      const li = document.createElement("li");
+      li.className = `dashboard-task-item priority-${task.priority || "medium"}`;
+      
+      const checkBtn = document.createElement("button");
+      checkBtn.type = "button";
+      checkBtn.className = "task-check-btn";
+      checkBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+      checkBtn.addEventListener("click", () => toggleDone(task.id));
+      
+      const textSpan = document.createElement("span");
+      textSpan.className = "task-text";
+      textSpan.textContent = task.text;
+      
+      const dueSpan = document.createElement("span");
+      const info = getDueDateInfo(task.dueDate);
+      dueSpan.className = `task-due ${info.class}`;
+      dueSpan.textContent = info.text;
+      
+      li.appendChild(checkBtn);
+      li.appendChild(textSpan);
+      li.appendChild(dueSpan);
+      upcomingTasksList.appendChild(li);
+    });
+  }
+  
+  // 2. Pinned Notes
+  pinnedNotesList.innerHTML = "";
+  const pinnedNotes = state.items.filter((item) => item.type === "note" && item.pinned);
+  
+  if (pinnedNotes.length === 0) {
+    pinnedNotesList.innerHTML = `<div class="empty-list-placeholder" style="padding: 12px; color: var(--text-secondary); text-align: center;">No pinned notes. Pin important notes in Notes tab to display them here!</div>`;
+  } else {
+    pinnedNotes.forEach((note) => {
+      const card = document.createElement("div");
+      card.className = "dashboard-note-card";
+      
+      const header = document.createElement("div");
+      header.className = "dashboard-note-header";
+      
+      const title = document.createElement("div");
+      title.className = "dashboard-note-title";
+      const lines = note.text.split("\n");
+      title.textContent = lines[0].slice(0, 30) + (lines[0].length > 30 ? "..." : "");
+      
+      const pinBtn = document.createElement("button");
+      pinBtn.type = "button";
+      pinBtn.className = "pin-toggle-btn pinned";
+      pinBtn.title = "Unpin note";
+      pinBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2L2 12h5l9 9v-5l5-5V2z"></path></svg>`;
+      pinBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        togglePin(note.id);
+      });
+      
+      header.appendChild(title);
+      header.appendChild(pinBtn);
+      card.appendChild(header);
+      
+      if (lines.length > 1 || lines[0].length > 30) {
+        const snippet = document.createElement("p");
+        snippet.className = "dashboard-note-snippet";
+        snippet.textContent = note.text;
+        card.appendChild(snippet);
+      }
+      
+      card.addEventListener("click", () => {
+        state.activeTab = "notes";
+        syncActiveTabHighlight("notes");
+        state.editingId = note.id;
+        render();
+      });
+      
+      pinnedNotesList.appendChild(card);
+    });
+  }
+  
+  // 3. Recent Activity
+  activityList.innerHTML = "";
+  if (state.activities.length === 0) {
+    activityList.innerHTML = `<li class="empty-list-placeholder" style="padding: 12px; color: var(--text-secondary); text-align: center;">No recent activity logs.</li>`;
+  } else {
+    state.activities.forEach((act) => {
+      const li = document.createElement("li");
+      li.className = "activity-item";
+      
+      const iconDiv = document.createElement("div");
+      iconDiv.className = "activity-icon";
+      let icon = "🔄";
+      if (act.text.includes("Created task")) icon = "➕";
+      else if (act.text.includes("Created note")) icon = "📝";
+      else if (act.text.includes("Completed")) icon = "✔️";
+      else if (act.text.includes("Reopened")) icon = "↩️";
+      else if (act.text.includes("Deleted")) icon = "🗑️";
+      else if (act.text.includes("Restored")) icon = "✅";
+      else if (act.text.includes("Pinned")) icon = "📌";
+      else if (act.text.includes("Unpinned")) icon = "📌";
+      else if (act.text.includes("Edited")) icon = "✏️";
+      iconDiv.textContent = icon;
+      
+      const detailsDiv = document.createElement("div");
+      detailsDiv.className = "activity-details";
+      
+      const textDiv = document.createElement("div");
+      textDiv.className = "activity-text";
+      textDiv.textContent = act.text;
+      
+      const subtextDiv = document.createElement("div");
+      subtextDiv.className = "activity-subtext";
+      
+      const elapsed = Date.now() - act.time;
+      let timeStr = "just now";
+      if (elapsed > 60000) {
+        const mins = Math.floor(elapsed / 60000);
+        if (mins < 60) {
+          timeStr = `${mins} min${mins === 1 ? "" : "s"} ago`;
+        } else {
+          const hrs = Math.floor(mins / 60);
+          if (hrs < 24) {
+            timeStr = `${hrs} hour${hrs === 1 ? "" : "s"} ago`;
+          } else {
+            timeStr = new Date(act.time).toLocaleDateString();
+          }
+        }
+      }
+      
+      subtextDiv.textContent = `${act.detail ? act.detail + " • " : ""}${timeStr}`;
+      
+      detailsDiv.appendChild(textDiv);
+      detailsDiv.appendChild(subtextDiv);
+      li.appendChild(iconDiv);
+      li.appendChild(detailsDiv);
+      activityList.appendChild(li);
+    });
+  }
+}
+
 function render() {
-  // Hide/show tag filters for trash tab
-  tagFiltersEl.style.display = state.activeTab === "trash" ? "none" : "";
-  renderTagFilters();
+  // Sync tab buttons highlight (both desktop sidebar and mobile nav bar)
+  syncActiveTabHighlight(state.activeTab);
 
   // Update trash count badge
   const trashCountEl = document.getElementById("trashCount");
@@ -926,45 +1215,54 @@ function render() {
     trashCountEl.textContent = state.trash.length > 0 ? state.trash.length : "";
   }
 
-  const visible = visibleItems();
-  itemListEl.innerHTML = "";
-  if (visible.length === 0) {
-    itemListEl.style.display = "none";
-    emptyStateEl.style.display = "flex";
-    if (state.activeTab === "trash") {
-      emptyStateEl.querySelector("p").textContent = "Trash is empty. Deleted items will appear here. 🗑️";
-    } else {
-      emptyStateEl.querySelector("p").textContent =
-        state.items.length === 0
-          ? "Nothing here yet. Add your first task or note above! 👆"
-          : "No items match your filters. 🔍";
-    }
+  // Dashboard Tab vs Filter Tab lists
+  if (state.activeTab === "dashboard") {
+    dashboardView.style.display = "block";
+    listViewPanel.style.display = "none";
+    updateGreetingText();
+    renderDashboard();
   } else {
-    itemListEl.style.display = "";
-    emptyStateEl.style.display = "none";
-    const frag = document.createDocumentFragment();
-    visible.forEach((item) => frag.appendChild(renderItem(item, state.activeTab === "trash")));
-    itemListEl.appendChild(frag);
-  }
+    dashboardView.style.display = "none";
+    listViewPanel.style.display = "block";
+    
+    // Hide/show tag filters for trash tab
+    tagFiltersEl.style.display = state.activeTab === "trash" ? "none" : "";
+    renderTagFilters();
 
-  renderCounter();
-  
-  clearDoneBtn.style.display = state.items.some(
-    (i) => i.type === "task" && i.done
-  ) && state.activeTab !== "trash"
-    ? "inline-block"
-    : "none";
+    const visible = visibleItems();
+    itemListEl.innerHTML = "";
+    if (visible.length === 0) {
+      itemListEl.style.display = "none";
+      emptyStateEl.style.display = "flex";
+      if (state.activeTab === "trash") {
+        emptyStateEl.querySelector("p").textContent = "Trash is empty. Deleted items will appear here. 🗑️";
+      } else {
+        emptyStateEl.querySelector("p").textContent =
+          state.items.length === 0
+            ? "Nothing here yet. Add your first task or note! 👆"
+            : "No items match your filters. 🔍";
+      }
+    } else {
+      itemListEl.style.display = "";
+      emptyStateEl.style.display = "none";
+      const frag = document.createDocumentFragment();
+      visible.forEach((item) => frag.appendChild(renderItem(item, state.activeTab === "trash")));
+      itemListEl.appendChild(frag);
+    }
 
-  // Show/hide empty trash button
-  const emptyTrashBtn = document.getElementById("emptyTrashBtn");
-  if (emptyTrashBtn) {
-    emptyTrashBtn.style.display = state.activeTab === "trash" && state.trash.length > 0 ? "inline-block" : "none";
-  }
+    renderCounter();
+    
+    clearDoneBtn.style.display = state.items.some(
+      (i) => i.type === "task" && i.done
+    ) && state.activeTab !== "trash"
+      ? "inline-block"
+      : "none";
 
-  // Re-adjust active tab slider position
-  const activeTabBtn = document.querySelector(".tab-link.active");
-  if (activeTabBtn) {
-    updateTabsSliderPosition(activeTabBtn);
+    // Show/hide empty trash button
+    const emptyTrashBtn = document.getElementById("emptyTrashBtn");
+    if (emptyTrashBtn) {
+      emptyTrashBtn.style.display = state.activeTab === "trash" && state.trash.length > 0 ? "inline-block" : "none";
+    }
   }
 }
 
@@ -980,10 +1278,7 @@ function updateTabsSliderPosition(activeBtn) {
 
 document.querySelectorAll(".tab-link").forEach((tabBtn) => {
   tabBtn.addEventListener("click", () => {
-    document.querySelectorAll(".tab-link").forEach((btn) => btn.classList.remove("active"));
-    tabBtn.classList.add("active");
     state.activeTab = tabBtn.getAttribute("data-tab");
-    updateTabsSliderPosition(tabBtn);
     render();
   });
 });
@@ -1010,8 +1305,66 @@ form.addEventListener("submit", (e) => {
   dueDateInput.value = "";
   prioritySelect.value = "medium";
   repeatSelect.value = "none";
-  textInput.focus();
+  if (quickAddModal) {
+    quickAddModal.style.display = "none";
+  }
 });
+
+// Quick Add modal toggle event listeners
+if (quickAddBtn) {
+  quickAddBtn.addEventListener("click", () => {
+    quickAddModal.style.display = "flex";
+    textInput.focus();
+  });
+}
+if (mobileQuickAddBtn) {
+  mobileQuickAddBtn.addEventListener("click", () => {
+    quickAddModal.style.display = "flex";
+    textInput.focus();
+  });
+}
+if (closeQuickAdd) {
+  closeQuickAdd.addEventListener("click", () => {
+    quickAddModal.style.display = "none";
+  });
+}
+if (quickAddModal) {
+  quickAddModal.addEventListener("click", (e) => {
+    if (e.target.id === "quickAddModal") {
+      quickAddModal.style.display = "none";
+    }
+  });
+}
+
+// Dashboard link redirects
+if (viewAllTasksLink) {
+  viewAllTasksLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    state.activeTab = "tasks";
+    render();
+  });
+}
+
+if (clearHistoryLink) {
+  clearHistoryLink.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const ok = await showCustomConfirm("Clear Activity Logs?", "Are you sure you want to clear your recent activities history? This updates across all devices.");
+    if (ok) {
+      state.activities = [];
+      persist();
+      render();
+    }
+  });
+}
+
+if (document.getElementById("sidebarHelpBtn")) {
+  document.getElementById("sidebarHelpBtn").addEventListener("click", () => {
+    showCustomAlert(
+      "SecondBrain Tips 🧠",
+      "• Notes: Can be pinned to Dashboard using the pushpin icon.\n• Tasks: Check complete to automatically advance recurring tasks.\n• Sync: Join the same room code on other devices to sync in real time!"
+    );
+  });
+}
 
 searchInput.addEventListener("input", () => {
   state.search = searchInput.value;
@@ -1049,6 +1402,8 @@ function leaveRoom() {
       
       appEl.style.display = "none";
       welcomeScreen.style.display = "flex";
+      const welcomeThemeToggle = document.getElementById("themeToggleWelcome");
+      if (welcomeThemeToggle) welcomeThemeToggle.style.display = "flex";
       roomDisplay.style.display = "none";
       roomInput.value = "";
       roomInput.focus();

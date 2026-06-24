@@ -69,166 +69,299 @@
   </div>
 
   <!-- ===== Main app ===== -->
-  <div id="app" class="app" style="display:none">
-    <!-- Header + Search + Sync -->
-    <header class="header">
-      <div class="header-row">
-        <div class="header-title-area">
-          <h1 class="title">📝 Remember</h1>
-          <div id="roomDisplay" class="room-display">
-            <span class="room-label">room:</span>
-            <span id="roomCodeText" class="room-code-text">...</span>
-            <button id="shareBtn" class="share-btn" title="Copy Invite Link">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
-            </button>
-            <button id="leaveRoomBtn" class="leave-btn" title="Leave/Switch Room">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-            </button>
-          </div>
-        </div>
-        <div class="header-actions">
-          <button id="themeToggleApp" class="theme-toggle-btn" title="Toggle Theme">
-            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-          </button>
+  <div id="app" class="app-container" style="display:none">
+    <!-- Sidebar Pane -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="sidebar-logo">🧠</span>
+        <div class="brand-text">
+          <h2>SecondBrain</h2>
           <button id="syncBtn" class="sync-btn" title="Sync status">
             <span id="syncDot" class="sync-dot saving"></span>
             <span id="syncText" class="sync-text">connecting…</span>
           </button>
         </div>
       </div>
-      <div class="search-wrap">
-        <span class="search-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </span>
-        <input
-          type="search"
-          id="searchInput"
-          class="search-input"
-          placeholder="Search your items..."
-          autocomplete="off"
-        />
-      </div>
-    </header>
 
-    <!-- Add new item (Two-row Expanded Layout) -->
-    <form id="addForm" class="add-form">
-      <!-- Row 1: Description Input -->
-      <div class="text-input-wrap">
-        <input
-          type="text"
-          id="textInput"
-          class="text-input"
-          placeholder="Write a task or note..."
-          autocomplete="off"
-          required
-        />
-      </div>
-
-      <!-- Image attachment preview -->
-      <div id="formImagePreview" class="form-image-preview" style="display: none;">
-        <img id="previewImg" src="" alt="Image Preview" />
-        <button type="button" id="removePreviewBtn" class="remove-preview-btn" title="Remove image">&times;</button>
-      </div>
-      
-      <!-- Row 2: Secondary Inputs -->
-      <div class="add-form-row-2">
-        <div class="tag-input-wrap">
-          <input
-            type="text"
-            id="tagSelect"
-            class="select tag-select"
-            list="tagList"
-            placeholder="#tag"
-            title="Tag (type your own or pick one)"
-            autocomplete="off"
-          />
-          <datalist id="tagList">
-            <option value="work"></option>
-            <option value="home"></option>
-            <option value="personal"></option>
-            <option value="ideas"></option>
-          </datalist>
+      <!-- Room connection info -->
+      <div id="roomDisplay" class="sidebar-room-card" style="display:none">
+        <div class="room-info">
+          <span class="room-label">ROOM</span>
+          <span id="roomCodeText" class="room-code-text">...</span>
         </div>
-        
-        <div class="date-input-wrap">
-          <input type="date" id="dueDateInput" class="select date-input" title="Due Date" />
-        </div>
-        
-        <div class="priority-input-wrap">
-          <select id="prioritySelect" class="select priority-select" title="Priority">
-            <option value="low">Low Priority</option>
-            <option value="medium" selected>Medium Priority</option>
-            <option value="high">High Priority</option>
-          </select>
-        </div>
-
-        <div class="repeat-input-wrap">
-          <select id="repeatSelect" class="select repeat-select" title="Repeat Interval">
-            <option value="none" selected>No Repeat</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="yearly">Yearly</option>
-          </select>
-        </div>
-
-        <!-- Image file upload input & trigger button -->
-        <div class="file-input-wrap">
-          <input type="file" id="imageInput" accept="image/*" style="display: none;" />
-          <button type="button" id="attachBtn" class="attach-btn" title="Attach Image/Photo">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="image-icon"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <div class="room-actions">
+          <button id="shareBtn" class="sidebar-action-btn" title="Copy Share Link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+          <button id="leaveRoomBtn" class="sidebar-action-btn leave-btn" title="Leave Room">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
           </button>
         </div>
-        
-        <!-- Segmented Slide Toggle for Task vs Note -->
-        <div class="segmented-control">
-          <input type="radio" id="typeTask" name="itemType" value="task" checked />
-          <label for="typeTask" class="segment-btn">Task</label>
-          
-          <input type="radio" id="typeNote" name="itemType" value="note" />
-          <label for="typeNote" class="segment-btn">Note</label>
-          
-          <span class="segment-slider"></span>
+      </div>
+
+      <!-- Sidebar Navigation Menu -->
+      <nav class="sidebar-menu">
+        <button class="menu-item tab-link active" data-tab="dashboard">
+          <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Dashboard
+        </button>
+        <button class="menu-item tab-link" data-tab="tasks">
+          <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          Tasks
+        </button>
+        <button class="menu-item tab-link" data-tab="notes">
+          <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          Notes
+        </button>
+        <button class="menu-item tab-link" data-tab="completed">
+          <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+          Archive
+        </button>
+        <button class="menu-item tab-link trash-tab" data-tab="trash">
+          <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4h6v2"></path></svg>
+          Trash <span id="trashCount" class="trash-count"></span>
+        </button>
+        <span class="tabs-slider" style="display:none"></span>
+      </nav>
+
+      <!-- Sidebar footer -->
+      <div class="sidebar-footer">
+        <button type="button" id="quickAddBtn" class="btn-quick-add">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Quick Add
+        </button>
+        <div class="footer-buttons">
+          <button id="themeToggleApp" class="theme-toggle-btn sidebar-icon-btn" title="Toggle Theme">
+            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+          <button type="button" id="sidebarHelpBtn" class="sidebar-icon-btn" title="Help Tips">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </button>
         </div>
-        
-        <button type="submit" class="btn-add">Add</button>
       </div>
-    </form>
+    </aside>
 
-    <!-- Dashboard Tabs -->
-    <div class="tabs-container">
-      <button class="tab-link active" data-tab="all">All</button>
-      <button class="tab-link" data-tab="tasks">Tasks</button>
-      <button class="tab-link" data-tab="notes">Notes</button>
-      <button class="tab-link" data-tab="completed">Completed</button>
-      <button class="tab-link trash-tab" data-tab="trash">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:-2px"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4h6v2"></path></svg>Trash
-        <span id="trashCount" class="trash-count"></span>
+    <!-- Main Content Pane -->
+    <main class="main-content">
+      <!-- Top Header bar -->
+      <div class="top-bar">
+        <div class="search-wrap">
+          <span class="search-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </span>
+          <input
+            type="search"
+            id="searchInput"
+            class="search-input"
+            placeholder="Search your brain..."
+            autocomplete="off"
+          />
+        </div>
+        <div class="top-bar-right">
+          <div class="top-sync-info">
+            <svg class="cloud-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+            <span id="topSyncStatusText">Syncing complete</span>
+          </div>
+          <div class="user-avatar" id="avatarBtn" title="sachin">
+            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=sachin" alt="User Avatar" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Main greeting panel -->
+      <div class="greeting-section">
+        <h1 id="greetingText" class="title">Good Morning, User</h1>
+        <p id="greetingSubText" class="welcome-sub">Syncing complete. 12 new updates since last night.</p>
+      </div>
+
+      <!-- Content Views -->
+      <!-- 1. Dashboard View -->
+      <div id="dashboardView" class="dashboard-view-panel">
+        <div class="dashboard-grid">
+          
+          <!-- Upcoming Tasks Card -->
+          <div class="dashboard-card upcoming-tasks-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="card-header-icon"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                Upcoming Tasks
+              </h3>
+              <span id="upcomingTasksBadge" class="badge-count">0 Today</span>
+            </div>
+            <ul id="upcomingTasksList" class="dashboard-task-list">
+              <!-- Rendered programmatically -->
+            </ul>
+            <button id="viewAllTasksLink" class="view-all-link">View all tasks &rarr;</button>
+          </div>
+
+          <!-- Pinned Notes Card -->
+          <div class="dashboard-card pinned-notes-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="card-header-icon"><line x1="18" y1="8" x2="22" y2="12"></line><line x1="12" y1="2" x2="22" y2="12"></line><path d="M12 2L2 12h5l9 9v-5l5-5V2z"></path></svg>
+                Pinned Notes
+              </h3>
+            </div>
+            <div id="pinnedNotesList" class="dashboard-notes-list">
+              <!-- Rendered programmatically -->
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Recent Activity Card -->
+        <div class="dashboard-card recent-activity-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="card-header-icon"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              Recent Activity
+            </h3>
+            <button id="clearHistoryLink" class="clear-history-link">Clear history</button>
+          </div>
+          <ul id="activityList" class="activity-feed">
+            <!-- Rendered programmatically -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- 2. Detailed Filter List View (shown when clicking items list tabs) -->
+      <div id="listViewPanel" class="list-view-panel" style="display:none">
+        <!-- Tag filters -->
+        <div id="tagFilters" class="tag-filters"></div>
+
+        <!-- Item list -->
+        <ul id="itemList" class="item-list"></ul>
+
+        <!-- Empty state -->
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">✨</div>
+          <p>Nothing here yet. Add your first task or note above!</p>
+        </div>
+
+        <!-- Footer actions & statistics counters -->
+        <footer class="footer">
+          <span id="counter"></span>
+          <div class="footer-actions">
+            <button id="clearDone" class="link-btn">Clear completed</button>
+            <button id="emptyTrashBtn" class="link-btn danger-link" style="display:none">Empty Trash</button>
+          </div>
+        </footer>
+      </div>
+
+    </main>
+
+    <!-- Bottom Nav Bar for Mobile -->
+    <div class="mobile-nav-bar">
+      <button class="mobile-nav-item tab-link active" data-tab="dashboard" title="Dashboard">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
       </button>
-      <span class="tabs-slider"></span>
+      <button class="mobile-nav-item tab-link" data-tab="tasks" title="Tasks">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+      </button>
+      <button type="button" id="mobileQuickAddBtn" class="mobile-quick-add-btn" title="Quick Add">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+      <button class="mobile-nav-item tab-link" data-tab="notes" title="Notes">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+      </button>
+      <button class="mobile-nav-item tab-link" data-tab="trash" title="Trash">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4h6v2"></path></svg>
+      </button>
     </div>
+  </div>
 
-    <!-- Tag filters -->
-    <div id="tagFilters" class="tag-filters"></div>
+  <!-- ===== Quick Add Modal ===== -->
+  <div id="quickAddModal" class="dialog-overlay modal-overlay" style="display:none">
+    <div class="modal-card dialog-card">
+      <button type="button" id="closeQuickAdd" class="close-modal-btn" title="Close Dialog">&times;</button>
+      <h3 class="modal-title">Create New</h3>
+      
+      <form id="addForm" class="add-form">
+        <!-- Text Input -->
+        <div class="text-input-wrap">
+          <input
+            type="text"
+            id="textInput"
+            class="text-input"
+            placeholder="Write a task or note..."
+            autocomplete="off"
+            required
+          />
+        </div>
 
-    <!-- Item list -->
-    <ul id="itemList" class="item-list"></ul>
+        <!-- Image preview inside modal -->
+        <div id="formImagePreview" class="form-image-preview" style="display: none;">
+          <img id="previewImg" src="" alt="Image Preview" />
+          <button type="button" id="removePreviewBtn" class="remove-preview-btn" title="Remove image">&times;</button>
+        </div>
 
-    <!-- Empty state -->
-    <div id="emptyState" class="empty-state">
-      <div class="empty-icon">✨</div>
-      <p>Nothing here yet. Add your first task or note above!</p>
+        <!-- Inputs Grid -->
+        <div class="modal-inputs-grid">
+          <div class="tag-input-wrap">
+            <label>Tag</label>
+            <input
+              type="text"
+              id="tagSelect"
+              class="select tag-select"
+              list="tagList"
+              placeholder="#tag"
+              autocomplete="off"
+            />
+            <datalist id="tagList"></datalist>
+          </div>
+          
+          <div class="date-input-wrap">
+            <label>Due Date</label>
+            <input type="date" id="dueDateInput" class="select date-input" />
+          </div>
+          
+          <div class="priority-input-wrap">
+            <label>Priority</label>
+            <select id="prioritySelect" class="select priority-select">
+              <option value="low">Low Priority</option>
+              <option value="medium" selected>Medium Priority</option>
+              <option value="high">High Priority</option>
+            </select>
+          </div>
+
+          <div class="repeat-input-wrap">
+            <label>Repeat</label>
+            <select id="repeatSelect" class="select repeat-select">
+              <option value="none" selected>No Repeat</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Bottom row: Type Slider, Image Attach & Submit -->
+        <div class="modal-submit-row">
+          <!-- Segmented Toggle -->
+          <div class="segmented-control">
+            <input type="radio" id="typeTask" name="itemType" value="task" checked />
+            <label for="typeTask" class="segment-btn">Task</label>
+            
+            <input type="radio" id="typeNote" name="itemType" value="note" />
+            <label for="typeNote" class="segment-btn">Note</label>
+            
+            <span class="segment-slider"></span>
+          </div>
+
+          <!-- Attach file -->
+          <div class="file-input-wrap">
+            <input type="file" id="imageInput" accept="image/*" style="display: none;" />
+            <button type="button" id="attachBtn" class="attach-btn" title="Attach Image">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="image-icon"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            </button>
+          </div>
+
+          <button type="submit" class="btn-add">Create Item</button>
+        </div>
+      </form>
     </div>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <span id="counter"></span>
-      <div class="footer-actions">
-        <button id="clearDone" class="link-btn">Clear completed</button>
-        <button id="emptyTrashBtn" class="link-btn danger-link" style="display:none">Empty Trash</button>
-      </div>
-    </footer>
   </div>
 
   <!-- ===== Custom Dialog Modals ===== -->
